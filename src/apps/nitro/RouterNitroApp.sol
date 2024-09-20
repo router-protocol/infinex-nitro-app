@@ -70,6 +70,29 @@ contract RouterNitroApp is AppAccountBase, IRouterNitroApp {
     }
 
     /**
+     * @dev This function is used to bridge mintable assets from one network to another.
+     * @param transferPayload The data related to the transfer.
+     */
+    function bridgeMintableAssets(IRouterNitroGateway.TransferPayload memory transferPayload)
+        external
+        payable
+        nonReentrant
+        requiresAuthorizedOperationsParty
+    {
+        // Get the app beacon instance
+        IRouterNitroAppBeacon appBeacon = _getAppBeacon();
+
+        // Get the gateway instance from the app beacon
+        IRouterNitroGateway gateway = IRouterNitroGateway(appBeacon.routerAssetBridgeGateway());
+
+        // Approve the gateway to spend the source token on behalf of the contract
+        IERC20(transferPayload.srcTokenAddress).approve(address(gateway), transferPayload.srcTokenAmount);
+
+        // Call the transferToken function on the gateway
+        gateway.transferToken{ value: msg.value }(transferPayload);
+    }
+
+    /**
      * @dev This function is used to update the bridge transaction data.
      * @param srcToken The source token address.
      * @param feeAmount The fee amount.
@@ -129,6 +152,35 @@ contract RouterNitroApp is AppAccountBase, IRouterNitroApp {
 
         // Call the deposit function on the gateway with the message
         gateway.iDepositMessage{ value: msg.value }(depositData, destToken, recipient, message);
+    }
+
+    /**
+     * @dev This function is used to bridge mintable assets with an instruction from one network to another.
+     * @param transferPayload The data related to the transfer.
+     * @param destGasLimit The destination gas limit.
+     * @param instruction The instruction to be sent along with the transaction.
+     */
+    function bridgeMintableAssetsWithInstruction(
+        IRouterNitroGateway.TransferPayload memory transferPayload,
+        uint64 destGasLimit,
+        bytes calldata instruction
+    )
+        external
+        payable
+        nonReentrant
+        requiresAuthorizedOperationsParty
+    {
+        // Get the app beacon instance
+        IRouterNitroAppBeacon appBeacon = _getAppBeacon();
+
+        // Get the gateway instance from the app beacon
+        IRouterNitroGateway gateway = IRouterNitroGateway(appBeacon.routerAssetBridgeGateway());
+
+        // Approve the gateway to spend the source token on behalf of the contract
+        IERC20(transferPayload.srcTokenAddress).approve(address(gateway), transferPayload.srcTokenAmount);
+
+        // Call the transferTokenWithInstruction function on the gateway
+        gateway.transferTokenWithInstruction{ value: msg.value }(transferPayload, destGasLimit, instruction);
     }
 
     /**
